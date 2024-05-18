@@ -2,7 +2,7 @@ import os
 import csv
 import methods as meth
 import initMethods as initMeth
-
+import matplotlib.pyplot as plt
 def LagrangeMethod(k):
     def interpolation_function(points):
         def f(x):
@@ -42,7 +42,16 @@ def LagrangeMethod(k):
             
             # At this point, distance, height, interpolated_height, train_distance, and train_height
             # contain the necessary data and can be used for further processing or analysis.
-
+            plt.semilogy(distance, height, 'r.', label='pełne dane')
+            plt.semilogy(distance, interpolated_height, color='blue', label='funkcja interpolująca')
+            plt.semilogy(train_distance, train_height, 'g.', label='dane do interpolacji')
+            plt.legend()
+            plt.ylabel('Wysokość')
+            plt.xlabel('Odległość')
+            plt.title('Przybliżenie interpolacją Lagrange\'a, ' + str(len(interpolation_data)) + ' punkty(ów)')
+            plt.suptitle(file)
+            plt.grid()
+            plt.show()
 
 def splineMethod(k):
     def interpolation_function(points):
@@ -165,3 +174,13 @@ def splineMethod(k):
 
         shift = -1 * interpolated_height.count(-123)
         # Use `distance`, `height`, `interpolated_height`, `train_distance`, and `train_height` as needed
+        plt.plot(distance, height, 'r.', label='pełne dane')
+        plt.plot(distance[:shift], interpolated_height[:shift], color='blue', label='funkcja interpolująca')
+        plt.plot(train_distance, train_height, 'g.', label='dane do interpolacji')
+        plt.legend()
+        plt.ylabel('Wysokość')
+        plt.xlabel('Odległość')
+        plt.title('Przybliżenie interpolacją Splajnami, ' + str(len(interpolation_data)) + ' punkty(ów)')
+        plt.suptitle(file)
+        plt.grid()
+        plt.show()
