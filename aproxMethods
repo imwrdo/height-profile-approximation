@@ -3,7 +3,7 @@ import csv
 import methods as meth
 import initMethods as initMeth
 
-def interpolate_and_compute(k):
+def LagrangeMethod(k):
     def interpolation_function(points):
         def f(x):
             result = 0
@@ -44,7 +44,7 @@ def interpolate_and_compute(k):
             # contain the necessary data and can be used for further processing or analysis.
 
 
-def interpolate_with_spline(k):
+def splineMethod(k):
     def interpolation_function(points):
         def calculate_params():
             n = len(points)
