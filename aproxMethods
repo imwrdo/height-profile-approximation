@@ -1,0 +1,167 @@
+import os
+import csv
+import methods as meth
+import initMethods as initMeth
+
+def interpolate_and_compute(k):
+    def interpolation_function(points):
+        def f(x):
+            result = 0
+            n = len(points)
+            for i in range(n):
+                xi, yi = points[i]
+                base = 1
+                for j in range(n):
+                    if i != j:
+                        xj, yj = points[j]
+                        base *= (float(x) - float(xj)) / (float(xi) - float(xj))
+                result += float(yi) * base
+            return result
+        return f
+
+    for file in os.listdir('./data'):
+        with open(f'./data/{file}', 'r') as f:
+            data = list(csv.reader(f))
+            
+            # Prepare interpolating function with subsampled data
+            interpolation_data = [(float(x), float(y)) for x, y in data[1::k]]
+            F = interpolation_function(interpolation_data)
+            
+            # Create lists to store the original and interpolated heights
+            distance, height, interpolated_height = [], [], []
+            for x, y in data[1:]:
+                distance.append(float(x))
+                height.append(float(y))
+                interpolated_height.append(F(float(x)))
+            
+            # Store training data
+            train_distance, train_height = [], []
+            for x, y in interpolation_data:
+                train_distance.append(float(x))
+                train_height.append(F(float(x)))
+            
+            # At this point, distance, height, interpolated_height, train_distance, and train_height
+            # contain the necessary data and can be used for further processing or analysis.
+
+
+def interpolate_with_spline(k):
+    def interpolation_function(points):
+        def calculate_params():
+            n = len(points)
+            A = meth.matzeros(4 * (n - 1), 4 * (n - 1))
+            b = meth.veczeros(4 * (n - 1))
+
+            for i in range(n - 1):
+                x, y = points[i]
+                row = meth.veczeros(4 * (n - 1))
+                row[4 * i + 3] = 1
+                A[4 * i + 3] = row
+                b[4 * i + 3] = float(y)
+
+            for i in range(n - 1):
+                x1, y1 = points[i + 1]
+                x0, y0 = points[i]
+                h = float(x1) - float(x0)
+                row = meth.veczeros(4 * (n - 1))
+                row[4 * i] = h ** 3
+                row[4 * i + 1] = h ** 2
+                row[4 * i + 2] = h
+                row[4 * i + 3] = 1
+                A[4 * i + 2] = row
+                b[4 * i + 2] = float(y1)
+
+            for i in range(n - 2):
+                x1, y1 = points[i + 1]
+                x0, y0 = points[i]
+                h = float(x1) - float(x0)
+                row = meth.veczeros(4 * (n - 1))
+                row[4 * i] = 3 * h ** 2
+                row[4 * i + 1] = 2 * h
+                row[4 * i + 2] = 1
+                row[4 * (i + 1) + 2] = -1
+                A[4 * i] = row
+                b[4 * i] = 0.0
+
+            for i in range(n - 2):
+                x1, y1 = points[i + 1]
+                x0, y0 = points[i]
+                h = float(x1) - float(x0)
+                row = meth.veczeros(4 * (n - 1))
+                row[4 * i] = 6 * h
+                row[4 * i + 1] = 2
+                row[4 * (i + 1) + 1] = -2
+                A[4 * (i + 1) + 1] = row
+                b[4 * (i + 1) + 1] = 0.0
+
+            row = meth.veczeros(4 * (n - 1))
+            row[1] = 2
+            A[1] = row
+            b[1] = 0.0
+
+            row = meth.veczeros(4 * (n - 1))
+            x1, y1 = points[-1]
+            x0, y0 = points[-2]
+            h = float(x1) - float(x0)
+            row[1] = 2
+            row[-4] = 6 * h
+            A[-4] = row
+            b[-4] = 0.0
+
+            result = initMeth.luFactoryzationMethod(A, b)
+            return result
+
+        params = calculate_params()
+
+        def f(x):
+            param_array = []
+            row = []
+            for param in params:
+                row.append(param)
+                if len(row) == 4:
+                    param_array.append(row.copy())
+                    row.clear()
+
+            for i in range(1, len(points)):
+                xi, yi = points[i - 1]
+                xj, yj = points[i]
+                if float(xi) <= x <= float(xj):
+                    a, b, c, d = param_array[i - 1]
+                    h = x - float(xi)
+                    return a * h ** 3 + b * h ** 2 + c * h + d
+
+            return -123
+
+        return f
+
+    for file in os.listdir('./data'):
+        with open(f'./data/{file}', 'r') as f:
+            data = list(csv.reader(f))
+
+        data = data[1:]
+        shift = (-1) * (len(data) % k)
+        if shift != 0:
+            interpolation_data = data[:shift:k]
+        else:
+            interpolation_data = data[::k]
+
+        interpolation_data = [(float(x), float(y)) for x, y in interpolation_data]
+        F = interpolation_function(interpolation_data)
+
+        distance = []
+        height = []
+        interpolated_height = []
+        for point in data:
+            x, y = point
+            distance.append(float(x))
+            height.append(float(y))
+            interpolated_height.append(F(float(x)))
+
+        train_distance = []
+        train_height = []
+        for point in interpolation_data:
+            x, y = point
+            train_distance.append(float(x))
+            train_height.append(float(y))
+
+        shift = -1 * interpolated_height.count(-123)
+        # Use `distance`, `height`, `interpolated_height`, `train_distance`, and `train_height` as needed
