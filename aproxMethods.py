@@ -3,6 +3,7 @@ import csv
 import methods as meth
 import initMethods as initMeth
 import matplotlib.pyplot as plt
+
 def LagrangeMethod(k):
     def interpolation_function(points):
         def f(x):
