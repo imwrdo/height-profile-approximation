@@ -1,10 +1,14 @@
 import os
 import csv
 import methods as meth
-import initMethods as initMeth
+import equationSolving as initMeth
 import matplotlib.pyplot as plt
+import numpy as np
 
-def LagrangeMethod(k):
+def chebyshev_nodes(a, b, n):
+    return [0.5 * (a + b) + 0.5 * (b - a) * np.cos(i* np.pi  / (n-1) ) for i in range(n)]
+
+def LagrangeMethod(k, use_chebyshev=False):
     def interpolation_function(points):
         def f(x):
             result = 0
@@ -23,36 +27,38 @@ def LagrangeMethod(k):
     for file in os.listdir('./data'):
         with open(f'./data/{file}', 'r') as f:
             data = list(csv.reader(f))
-            
-            # Prepare interpolating function with subsampled data
-            interpolation_data = [(float(x), float(y)) for x, y in data[1::k]]
-            F = interpolation_function(interpolation_data)
-            
-            # Create lists to store the original and interpolated heights
-            distance, height, interpolated_height = [], [], []
-            for x, y in data[1:]:
-                distance.append(float(x))
-                height.append(float(y))
-                interpolated_height.append(F(float(x)))
-            
-            # Store training data
-            train_distance, train_height = [], []
-            for x, y in interpolation_data:
-                train_distance.append(float(x))
-                train_height.append(F(float(x)))
-            
-            # At this point, distance, height, interpolated_height, train_distance, and train_height
-            # contain the necessary data and can be used for further processing or analysis.
-            plt.semilogy(distance, height, 'r.', label='pełne dane')
-            plt.semilogy(distance, interpolated_height, color='blue', label='funkcja interpolująca')
-            plt.semilogy(train_distance, train_height, 'g.', label='dane do interpolacji')
-            plt.legend()
-            plt.ylabel('Wysokość')
-            plt.xlabel('Odległość')
-            plt.title('Przybliżenie interpolacją Lagrange\'a, ' + str(len(interpolation_data)) + ' punkty(ów)')
-            plt.suptitle(file)
-            plt.grid()
-            plt.show()
+        
+        data = [(float(x), float(y)) for x, y in data[1:]]
+        if use_chebyshev:
+            a, b = data[0][0], data[-1][0]
+            nodes = chebyshev_nodes(a, b, len(data) // k)
+            interpolation_data = [(node, next(y for x, y in data if x >= node)) for node in nodes]
+        else:
+            interpolation_data = data[1::k]
+        
+        F = interpolation_function(interpolation_data)
+
+        distance, height, interpolated_height = [], [], []
+        for x, y in data:
+            distance.append(float(x))
+            height.append(float(y))
+            interpolated_height.append(F(float(x)))
+
+        train_distance, train_height = [], []
+        for x, y in interpolation_data:
+            train_distance.append(float(x))
+            train_height.append(F(float(x)))
+
+        plt.semilogy(distance, height, 'r.', label='pełne dane')
+        plt.semilogy(distance, interpolated_height, color='blue', label='funkcja interpolująca')
+        plt.semilogy(train_distance, train_height, 'g.', label='dane do interpolacji')
+        plt.legend()
+        plt.ylabel('Wysokość')
+        plt.xlabel('Odległość')
+        plt.title('Przybliżenie interpolacją Lagrange\'a, ' + str(len(interpolation_data)) + ' punkty(ów)')
+        plt.suptitle(file)
+        plt.grid()
+        plt.show()
 
 def splineMethod(k):
     def interpolation_function(points):
@@ -139,7 +145,12 @@ def splineMethod(k):
                     h = x - float(xi)
                     return a * h ** 3 + b * h ** 2 + c * h + d
 
-            return -123
+            if x < float(points[0][0]):
+                return param_array[0][3]
+            elif x > float(points[-1][0]):
+                return param_array[-1][3]
+
+            return None
 
         return f
 
@@ -153,6 +164,9 @@ def splineMethod(k):
             interpolation_data = data[:shift:k]
         else:
             interpolation_data = data[::k]
+
+        if interpolation_data[-1] != data[-1]:
+            interpolation_data.append(data[-1])
 
         interpolation_data = [(float(x), float(y)) for x, y in interpolation_data]
         F = interpolation_function(interpolation_data)
@@ -173,10 +187,8 @@ def splineMethod(k):
             train_distance.append(float(x))
             train_height.append(float(y))
 
-        shift = -1 * interpolated_height.count(-123)
-        # Use `distance`, `height`, `interpolated_height`, `train_distance`, and `train_height` as needed
         plt.plot(distance, height, 'r.', label='pełne dane')
-        plt.plot(distance[:shift], interpolated_height[:shift], color='blue', label='funkcja interpolująca')
+        plt.plot(distance, interpolated_height, color='blue', label='funkcja interpolująca')
         plt.plot(train_distance, train_height, 'g.', label='dane do interpolacji')
         plt.legend()
         plt.ylabel('Wysokość')
