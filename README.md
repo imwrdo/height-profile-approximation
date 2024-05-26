@@ -2,7 +2,8 @@
 
 ## Project Description
 
-The project presents an analysis of the approximational methods Lagrange and spline
+The project focuses on the implementation and analysis of two interpolation approximation methods: Lagrange and a method using third-degree glued functions.
+The goal is to approximate the elevation profile of selected routes based on real data and to investigate which method is most suitable for this type of analysis.
 
 ## Technologies
 
